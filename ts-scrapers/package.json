@@ -1,0 +1,19 @@
+{
+  "name": "hifi-scrapers-ts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "tsc --noEmit",
+    "generate": "python3 ../tools/convert_scrapers_to_ts.py",
+    "site": "npm run build --silent && node dist/scripts/run-site.js"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.43.0",
+    "cheerio": "^1.0.0-rc.12"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

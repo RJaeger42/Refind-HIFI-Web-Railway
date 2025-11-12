@@ -1,0 +1,41 @@
+{
+  "name": "hifi-scrapers-ts",
+  "version": "1.0.0",
+  "description": "TypeScript Playwright web scrapers for HiFi equipment marketplaces",
+  "main": "dist/SiteScrapers/index.js",
+  "scripts": {
+    "build": "tsc",
+    "lint": "tsc --noEmit",
+    "test": "playwright test",
+    "test:quick": "ts-node test-quick.ts",
+    "test:basic": "playwright test tests/basic.test.ts",
+    "test:integration": "playwright test tests/integration.test.ts",
+    "test:view": "ts-node test-results-viewer.ts",
+    "test:all": "ts-node test-all-scrapers.ts",
+    "dev": "ts-node",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.43.0",
+    "cheerio": "^1.0.0-rc.12",
+    "playwright": "^1.43.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.4.0",
+    "ts-node": "^10.9.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "scraper",
+    "playwright",
+    "typescript",
+    "hifi",
+    "web-scraping",
+    "automation"
+  ],
+  "author": "Rickard",
+  "license": "MIT"
+}

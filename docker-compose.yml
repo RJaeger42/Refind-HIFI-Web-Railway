@@ -1,0 +1,171 @@
+version: '3.9'
+
+services:
+  # =========================================================================
+  # Development Environment - Full dev tools and hot reload
+  # =========================================================================
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: hifi-scrapers-dev
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - ./dist:/app/dist
+      - ./output:/app/output
+      - ./logs:/app/logs
+    environment:
+      - NODE_ENV=development
+      - DEBUG=true
+    ports:
+      - "3000:3000"
+    command: npm run test:quick
+    # Keep container running for interactive use
+    stdin_open: true
+    tty: true
+
+  # =========================================================================
+  # Test Runner - Run all tests
+  # =========================================================================
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: testing
+    container_name: hifi-scrapers-test
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - ./test-results:/app/test-results
+      - ./coverage:/app/coverage
+    environment:
+      - NODE_ENV=test
+      - CI=true
+    command: npm test
+
+  # =========================================================================
+  # Test Smoke - Run quick smoke tests only
+  # =========================================================================
+  test-smoke:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: testing
+    container_name: hifi-scrapers-test-smoke
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=test
+    command: bash -c "npm run test:quick"
+
+  # =========================================================================
+  # Test Basic - Run unit tests only
+  # =========================================================================
+  test-basic:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: testing
+    container_name: hifi-scrapers-test-basic
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=test
+    command: npm run test:basic
+
+  # =========================================================================
+  # Test Integration - Run integration tests (against real sites)
+  # =========================================================================
+  test-integration:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: testing
+    container_name: hifi-scrapers-test-integration
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=test
+    command: npm run test:integration
+    # Longer timeout for real site access
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  # =========================================================================
+  # Production - Minimal production image
+  # =========================================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: hifi-scrapers-app
+    volumes:
+      - ./output:/app/output
+      - ./logs:/app/logs
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('fs').accessSync('dist'); console.log('OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  # =========================================================================
+  # Production Slim - Minimal footprint for CI/CD
+  # =========================================================================
+  app-slim:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production-slim
+    container_name: hifi-scrapers-app-slim
+    volumes:
+      - ./output:/app/output
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+
+  # =========================================================================
+  # Build - Just compile TypeScript
+  # =========================================================================
+  build:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: hifi-scrapers-build
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run build
+
+# ============================================================================
+# Named Volumes for persistent data
+# ============================================================================
+volumes:
+  output:
+    driver: local
+  logs:
+    driver: local
+  test-results:
+    driver: local
+  coverage:
+    driver: local
+
+# ============================================================================
+# Networks
+# ============================================================================
+networks:
+  default:
+    name: hifi-scrapers-network
+    driver: bridge

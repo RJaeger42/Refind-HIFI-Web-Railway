@@ -1,0 +1,40 @@
+{
+  "name": "site-scrapers",
+  "version": "1.0.0",
+  "description": "TypeScript Playwright-based web scraper library for Swedish HiFi retailers",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "playwright test",
+    "test:watch": "playwright test --watch",
+    "lint": "eslint src/**/*.ts",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "clean": "rm -rf dist",
+    "scrape": "ts-node scripts/scrape.ts"
+  },
+  "keywords": [
+    "web-scraping",
+    "playwright",
+    "typescript",
+    "hifi",
+    "retailers",
+    "automation"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "playwright": "^1.40.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0",
+    "ts-node": "^10.9.1",
+    "eslint": "^8.55.0",
+    "@typescript-eslint/eslint-plugin": "^6.14.0",
+    "@typescript-eslint/parser": "^6.14.0",
+    "prettier": "^3.1.0"
+  }
+}
