@@ -1,6 +1,6 @@
 import { BaseScraper } from '../BaseScraper';
 import { ListingResult, ScraperOptions } from '../types';
-import { extractPrice, normalizeUrl, filterByPrice } from '../utils';
+import { extractPrice, normalizeUrl, filterByPrice, matchesSearchQuery } from '../utils';
 
 /**
  * Playwright-based scraper for Facebook Marketplace
@@ -84,7 +84,7 @@ export class FacebookPlaywright extends BaseScraper {
               const titleElement = item.locator('span').first();
               const title = await titleElement.textContent();
 
-              if (!title || !title.toLowerCase().includes(query.toLowerCase())) {
+              if (!title || !matchesSearchQuery(title, query)) {
                 continue;
               }
 

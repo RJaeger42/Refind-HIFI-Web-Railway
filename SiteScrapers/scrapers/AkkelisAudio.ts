@@ -1,6 +1,6 @@
 import { BaseScraper } from '../BaseScraper';
 import { ListingResult, ScraperOptions } from '../types';
-import { extractPrice, normalizeUrl, filterByPrice } from '../utils';
+import { extractPrice, normalizeUrl, filterByPrice, matchesSearchQuery } from '../utils';
 
 /**
  * Playwright-based scraper for Akkelis Audio
@@ -45,14 +45,13 @@ export class AkkelisAudioPlaywright extends BaseScraper {
       // Extract all items
       const items = await page.locator('.tws-list--grid-item').all();
       const results: ListingResult[] = [];
-      const queryLower = query.toLowerCase();
 
       for (const item of items) {
         // Extract title
         const titleElement = item.locator('.tws-util-heading--heading a');
         const title = await titleElement.textContent();
 
-        if (!title?.toLowerCase().includes(queryLower)) {
+        if (!title || !matchesSearchQuery(title, query)) {
           continue;
         }
 

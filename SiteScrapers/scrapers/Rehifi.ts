@@ -1,6 +1,6 @@
 import { BaseScraper } from '../BaseScraper';
 import { ListingResult, ScraperOptions } from '../types';
-import { extractPrice, normalizeUrl, filterByPrice } from '../utils';
+import { extractPrice, normalizeUrl, filterByPrice, matchesSearchQuery } from '../utils';
 
 /**
  * Playwright-based scraper for Rehifi
@@ -68,7 +68,7 @@ export class RehifiPlaywright extends BaseScraper {
 
             if (!title || !url) continue;
 
-            if (!title.toLowerCase().includes(query.toLowerCase())) {
+            if (!matchesSearchQuery(title, query)) {
               continue;
             }
 

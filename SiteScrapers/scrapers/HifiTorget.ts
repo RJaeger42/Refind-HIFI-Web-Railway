@@ -1,6 +1,6 @@
 import { BaseScraper } from '../BaseScraper';
 import { ListingResult, ScraperOptions } from '../types';
-import { extractPrice, normalizeUrl, filterByPrice } from '../utils';
+import { extractPrice, normalizeUrl, filterByPrice, matchesSearchQuery } from '../utils';
 
 /**
  * Playwright-based scraper for HifiTorget.se
@@ -80,7 +80,7 @@ export class HifiTorgetPlaywright extends BaseScraper {
             const href = await titleLink.getAttribute('href');
             if (!href) continue;
 
-            if (!titleText.toLowerCase().includes(query.toLowerCase())) {
+            if (!matchesSearchQuery(titleText, query)) {
               continue;
             }
 

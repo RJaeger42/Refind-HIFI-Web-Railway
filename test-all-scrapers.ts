@@ -13,6 +13,7 @@
 
 import { chromium } from 'playwright';
 import { getScraperByName, getAvailableScrapers, type ListingResult } from './SiteScrapers';
+import { matchesSearchQuery } from './SiteScrapers/utils';
 
 const args = process.argv.slice(2);
 
@@ -58,11 +59,18 @@ async function main() {
         await (scraper as any).initializeBrowser(browser);
 
         const searchResults = await scraper.search(query, minPrice, maxPrice);
+
+        // Apply additional strict filtering to ensure all results match the query
+        const filteredResults = searchResults.filter(result =>
+          matchesSearchQuery(result.title, query) ||
+          (result.description && matchesSearchQuery(result.description, query))
+        );
+
         results.push({
           name: scraperName,
-          results: searchResults,
+          results: filteredResults,
         });
-        console.log(`✅ Found ${searchResults.length} results`);
+        console.log(`✅ Found ${filteredResults.length} results (${searchResults.length} total, ${searchResults.length - filteredResults.length} filtered out)`);
         await scraper.close();
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);

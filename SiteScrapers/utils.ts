@@ -103,20 +103,21 @@ export function deduplicateByUrl(listings: ListingResult[]): ListingResult[] {
 }
 
 /**
- * Filter listings by query string (case-insensitive substring match)
+ * Filter listings by query string using strict word boundary matching
+ * @deprecated Use matchesSearchQuery() directly instead for better control
  */
 export function filterByQuery(
   listings: ListingResult[],
   query: string
 ): ListingResult[] {
-  const lowerQuery = (query || '').toLowerCase();
-  return listings.filter(
-    (listing) =>
-      lowerQuery === '' ||
-      listing.title.toLowerCase().includes(lowerQuery) ||
-      (listing.description &&
-        listing.description.toLowerCase().includes(lowerQuery))
-  );
+  if (!query || query.trim() === '') {
+    return listings;
+  }
+
+  return listings.filter((listing) => {
+    const textToSearch = `${listing.title} ${listing.description || ''}`;
+    return matchesSearchQuery(textToSearch, query);
+  });
 }
 
 /**
@@ -124,4 +125,47 @@ export function filterByQuery(
  */
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Check if text matches a search query with strict word boundary matching.
+ * - Case-insensitive
+ * - All search terms must be present as whole words
+ * - Words can appear in any order
+ * - Word boundaries prevent partial matches (e.g., "NAD" won't match "begagnad")
+ *
+ * @param text - The text to search in (title, description, etc.)
+ * @param query - The search query (can be multiple words)
+ * @returns true if all words in the query are found as whole words in the text
+ *
+ * @example
+ * matchesSearchQuery("NAD M12 amplifier", "NAD M12") // true
+ * matchesSearchQuery("M12 amplifier by NAD", "NAD M12") // true (any order)
+ * matchesSearchQuery("begagnad amplifier", "NAD") // false (not a whole word)
+ * matchesSearchQuery("NADC299", "NAD") // false (no word boundary)
+ * matchesSearchQuery("NAD c299 amplifier", "NAD c299") // true
+ */
+export function matchesSearchQuery(text: string, query: string): boolean {
+  if (!text || !query) {
+    return false;
+  }
+
+  // Normalize text and query to lowercase for case-insensitive matching
+  const normalizedText = text.toLowerCase();
+  const normalizedQuery = query.toLowerCase().trim();
+
+  // Split query into individual words
+  const searchWords = normalizedQuery.split(/\s+/).filter(word => word.length > 0);
+
+  // Check that all search words are present as whole words in the text
+  return searchWords.every(searchWord => {
+    // Escape special regex characters in the search word
+    const escapedWord = searchWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    // Create a regex pattern that matches the word with word boundaries
+    // \b matches word boundaries (spaces, punctuation, start/end of string)
+    const wordBoundaryRegex = new RegExp(`\\b${escapedWord}\\b`, 'i');
+
+    return wordBoundaryRegex.test(normalizedText);
+  });
 }

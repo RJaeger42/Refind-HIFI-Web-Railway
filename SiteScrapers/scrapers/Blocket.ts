@@ -1,6 +1,6 @@
 import { BaseScraper } from '../BaseScraper';
 import { ListingResult, ScraperOptions } from '../types';
-import { extractPrice, normalizeUrl, filterByPrice } from '../utils';
+import { extractPrice, normalizeUrl, filterByPrice, matchesSearchQuery } from '../utils';
 
 /**
  * Playwright-based scraper for Blocket.se (Swedish marketplace)
@@ -118,7 +118,6 @@ export class BlocketPlaywright extends BaseScraper {
     query: string
   ): Promise<ListingResult[]> {
     const results: ListingResult[] = [];
-    const queryLower = query.toLowerCase();
 
     try {
       // Get all article elements or listing containers
@@ -157,7 +156,7 @@ export class BlocketPlaywright extends BaseScraper {
             title = heading;
           }
 
-          if (!title || !title.toLowerCase().includes(queryLower)) {
+          if (!title || !matchesSearchQuery(title, query)) {
             continue;
           }
 
@@ -230,7 +229,6 @@ export class BlocketPlaywright extends BaseScraper {
     maxPrice?: number
   ): ListingResult[] {
     const results: ListingResult[] = [];
-    const queryLower = query.toLowerCase();
 
     try {
       // Extract listings from various possible API response structures
@@ -244,7 +242,7 @@ export class BlocketPlaywright extends BaseScraper {
         if (!item) continue;
 
         const title = item.title || item.heading || item.name || '';
-        if (!title.toLowerCase().includes(queryLower)) {
+        if (!matchesSearchQuery(title, query)) {
           continue;
         }
 
