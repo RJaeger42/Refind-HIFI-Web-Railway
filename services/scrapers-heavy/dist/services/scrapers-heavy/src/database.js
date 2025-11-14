@@ -6,6 +6,11 @@ exports.testConnection = testConnection;
 exports.closeConnection = closeConnection;
 exports.logScraperError = logScraperError;
 const pg_1 = require("pg");
+// Validate DATABASE_URL exists
+if (!process.env.DATABASE_URL && !process.env.DATABASE_PUBLIC_URL) {
+    console.error('❌ FATAL: DATABASE_URL is not set');
+    process.exit(1);
+}
 const pool = new pg_1.Pool({
     connectionString: process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,

@@ -3,6 +3,12 @@ console.log('📍 PORT:', process.env.PORT || 3000);
 console.log('📍 NODE_ENV:', process.env.NODE_ENV);
 console.log('📍 DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
 
+// Validate required env vars
+if (!process.env.DATABASE_URL && !process.env.DATABASE_PUBLIC_URL) {
+  console.error('❌ FATAL: DATABASE_URL is not set');
+  process.exit(1);
+}
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';

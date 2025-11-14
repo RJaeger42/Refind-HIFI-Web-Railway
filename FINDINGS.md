@@ -1,14 +1,11 @@
 # FINDINGS
 
-## Deployment blockers
-- **Heavy scrapers service never builds its own code** – both `services/scrapers-heavy/Dockerfile:7` and `services/scrapers-heavy/railway.json:3` copy/build from `services/scrapers/...`, so the “heavy” Railway service is actually running the light scraper image. This means Railway never packages the Facebook/HifiShark logic it is supposed to expose, and the API’s `/api/scrape/*` calls and webhook/status endpoints keep failing with 502s. Point the Dockerfile/railway configuration at `services/scrapers-heavy/...` (source files and Dockerfile) so each service ships the right bundle.
 
 - **Frontend nginx proxy hard-codes the API hostname** – `services/frontend/nginx.conf:18` proxies `/api` to `https://api-production-d092.up.railway.app`, so whenever Railway chooses a new API domain or you want to deploy elsewhere the frontend still forwards to the stale host and the UI stays at 502. Parameterize the upstream (e.g., `proxy_pass $API_BACKEND_URL;` with the environment variable defined in Railway) or use the internal service hostname so the SPA keeps talking to whatever API is actually running.
 
 ## Security & stability risks
 - **API and scrapers assume critical env vars and SSL settings without validation** – `services/api/src/server.ts:9-18` builds the Postgres pool with whatever `DATABASE_URL`/`DATABASE_PUBLIC_URL` is present and enables SSL only when `NODE_ENV === 'production'`. Railway leaves `NODE_ENV` undefined by default, so the pool does not use SSL and the first query against Railway Postgres will throw due to the required SSL handshake, leading to immediate crashes and the 502s seen on the public URL. It also never fails fast when `DATABASE_URL` is missing. Require these variables explicitly, validate them at startup, and configure the pool to use SSL whenever a connection string exists (or make `NODE_ENV` fixed to `production` in the Railway service settings).
 
-- **Webhook endpoints accept the default secret** – both `services/scrapers/src/webhook.ts:5` and `services/scrapers-heavy/src/webhook.ts:5` default `WEBHOOK_SECRET` to `change-me-in-production` and never reject startup when it isn't overridden. In Railway this exposes unauthenticated `/trigger`/`/status` endpoints that can be called by anyone if the secret isn’t changed, meaning remote actors can start scraping jobs and flood the database. Fail the process when the secret is unset or keep the secret unique per environment and document that it must be configured in the Railway variables.
 
 ## Recommendations & improvements
 - **Document required env vars and validation** – add a lightweight startup check (or use a config helper) that validates `DATABASE_URL`, `PORT`, and `WEBHOOK_SECRET` before doing any I/O, log clear errors, and gracefully exit when they are missing. Mention the expected values in the README or a deployment guide so whoever redeploys the stack doesn’t forget to set them.
