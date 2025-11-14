@@ -167,6 +167,83 @@ app.get('/api/stats', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+// Trigger scraper manually
+app.post('/api/scrape/trigger', async (req, res) => {
+    try {
+        const { container } = req.body;
+        const secret = process.env.WEBHOOK_SECRET || 'change-me-in-production';
+        if (!['heavy', 'light', 'all'].includes(container)) {
+            return res.status(400).json({ error: 'Invalid container. Must be: heavy, light, or all' });
+        }
+        const results = [];
+        // Trigger heavy scrapers
+        if (container === 'heavy' || container === 'all') {
+            try {
+                const response = await fetch('http://scrapers-heavy.railway.internal:3001/trigger', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${secret}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+                const data = await response.json();
+                results.push({ container: 'heavy', success: response.ok, data });
+            }
+            catch (error) {
+                results.push({ container: 'heavy', success: false, error: error.message });
+            }
+        }
+        // Trigger light scrapers
+        if (container === 'light' || container === 'all') {
+            try {
+                const response = await fetch('http://scrapers.railway.internal:3001/trigger', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${secret}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+                const data = await response.json();
+                results.push({ container: 'light', success: response.ok, data });
+            }
+            catch (error) {
+                results.push({ container: 'light', success: false, error: error.message });
+            }
+        }
+        res.json({ triggered: true, results });
+    }
+    catch (error) {
+        console.error('Error triggering scrapers:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+// Get scraper status
+app.get('/api/scrape/status', async (req, res) => {
+    try {
+        const results = {};
+        // Get heavy scraper status
+        try {
+            const response = await fetch('http://scrapers-heavy.railway.internal:3001/status');
+            results.heavy = await response.json();
+        }
+        catch (error) {
+            results.heavy = { error: error.message };
+        }
+        // Get light scraper status
+        try {
+            const response = await fetch('http://scrapers.railway.internal:3001/status');
+            results.light = await response.json();
+        }
+        catch (error) {
+            results.light = { error: error.message };
+        }
+        res.json(results);
+    }
+    catch (error) {
+        console.error('Error fetching scraper status:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 // 404 handler
 app.use((req, res) => {
     res.status(404).json({ error: 'Not found' });

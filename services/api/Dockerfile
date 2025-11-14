@@ -2,10 +2,10 @@ FROM node:18-slim
 
 WORKDIR /app
 
-# Copy API service files
-COPY services/api/package*.json ./
-COPY services/api/tsconfig.json ./
-COPY services/api/src ./src
+# Copy package files
+COPY package*.json ./
+COPY tsconfig.json ./
+COPY src ./src
 
 # Install ALL dependencies (including dev for build)
 RUN npm ci
