@@ -1,0 +1,65 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.saveListing = saveListing;
+exports.saveListings = saveListings;
+exports.testConnection = testConnection;
+exports.closeConnection = closeConnection;
+const pg_1 = require("pg");
+const pool = new pg_1.Pool({
+    connectionString: process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+});
+async function saveListing(listing) {
+    const query = `
+    INSERT INTO listings (product, price, condition, url, site_source, description, image_url, location, posted_date, scraped_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+    ON CONFLICT (url) DO UPDATE
+    SET
+      price = EXCLUDED.price,
+      product = EXCLUDED.product,
+      condition = EXCLUDED.condition,
+      description = EXCLUDED.description,
+      image_url = EXCLUDED.image_url,
+      location = EXCLUDED.location,
+      posted_date = EXCLUDED.posted_date,
+      scraped_at = NOW()
+  `;
+    await pool.query(query, [
+        listing.product,
+        listing.price,
+        listing.condition,
+        listing.url,
+        listing.site_source,
+        listing.description,
+        listing.image_url,
+        listing.location,
+        listing.posted_date,
+    ]);
+}
+async function saveListings(listings) {
+    let saved = 0;
+    for (const listing of listings) {
+        try {
+            await saveListing(listing);
+            saved++;
+        }
+        catch (error) {
+            console.error(`Failed to save listing ${listing.url}:`, error);
+        }
+    }
+    return saved;
+}
+async function testConnection() {
+    try {
+        const result = await pool.query('SELECT NOW()');
+        console.log('✅ Database connected:', result.rows[0].now);
+        return true;
+    }
+    catch (error) {
+        console.error('❌ Database connection failed:', error);
+        return false;
+    }
+}
+async function closeConnection() {
+    await pool.end();
+}

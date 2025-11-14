@@ -33,7 +33,6 @@ export {
 export { AkkelisAudioPlaywright, createAkkelisAudioPlaywright } from './scrapers/AkkelisAudio';
 export { AudioConceptPlaywright, createAudioConceptPlaywright } from './scrapers/AudioConcept';
 export { AudioPerformancePlaywright, createAudioPerformancePlaywright } from './scrapers/AudioPerformance';
-export { BlocketPlaywright, createBlocketPlaywright } from './scrapers/Blocket';
 export { FacebookPlaywright, createFacebookPlaywright } from './scrapers/Facebook';
 export { HifiExperiencePlaywright, createHifiExperiencePlaywright } from './scrapers/HifiExperience';
 export { HifiPulsPlaywright, createHifiPulsPlaywright } from './scrapers/HifiPuls';
@@ -44,7 +43,6 @@ export { LjudmakarnPlaywright, createLjudmakarnPlaywright } from './scrapers/Lju
 export { LasseshifiPlaywright, createLasseshifiPlaywright } from './scrapers/Lasseshifi';
 export { ReferenceAudioPlaywright, createReferenceAudioPlaywright } from './scrapers/ReferenceAudio';
 export { RehifiPlaywright, createRehifiPlaywright } from './scrapers/Rehifi';
-export { TraderaPlaywright, createTraderaPlaywright } from './scrapers/Tradera';
 
 /**
  * Pre-configured scraper registry
@@ -63,8 +61,6 @@ export const AVAILABLE_SCRAPERS = {
     import('./scrapers/AudioPerformance').then((m) =>
       m.createAudioPerformancePlaywright()
     ),
-  blocket: () =>
-    import('./scrapers/Blocket').then((m) => m.createBlocketPlaywright()),
   facebook: () =>
     import('./scrapers/Facebook').then((m) => m.createFacebookPlaywright()),
   hifiexperience: () =>
@@ -99,8 +95,6 @@ export const AVAILABLE_SCRAPERS = {
     ),
   rehifi: () =>
     import('./scrapers/Rehifi').then((m) => m.createRehifiPlaywright()),
-  tradera: () =>
-    import('./scrapers/Tradera').then((m) => m.createTraderaPlaywright()),
 } as const;
 
 export type ScraperName = keyof typeof AVAILABLE_SCRAPERS;
