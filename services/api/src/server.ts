@@ -1,27 +1,52 @@
+console.log('🚀 API Server starting...');
+console.log('📍 PORT:', process.env.PORT || 3000);
+console.log('📍 NODE_ENV:', process.env.NODE_ENV);
+console.log('📍 DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import pg from 'pg';
 
+console.log('✅ Imports loaded');
+
 const { Pool } = pg;
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+console.log('✅ Express app created');
+
 // Database connection pool
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
+let pool: pg.Pool;
+try {
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
+  });
+  console.log('✅ Database pool created');
+
+  // Test connection
+  pool.query('SELECT 1').then(() => {
+    console.log('✅ Database connection successful');
+  }).catch(err => {
+    console.error('❌ Database connection test failed:', err.message);
+  });
+} catch (error) {
+  console.error('❌ Failed to create database pool:', error);
+  throw error;
+}
 
 // Middleware
+console.log('📦 Loading middleware...');
 app.use(helmet());
 app.use(compression());
 app.use(cors());
 app.use(express.json());
+console.log('✅ Middleware loaded');
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -302,8 +327,33 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 // Start server - bind to 0.0.0.0 for Docker/Railway
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`API server running on port ${PORT}`);
+console.log(`🌐 Attempting to start server on port ${PORT}...`);
+try {
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ ✅ ✅ API server running on port ${PORT} ✅ ✅ ✅`);
+  });
+
+  server.on('error', (error: any) => {
+    console.error('❌ Server error:', error);
+    if (error.code === 'EADDRINUSE') {
+      console.error(`❌ Port ${PORT} is already in use`);
+    }
+    process.exit(1);
+  });
+} catch (error) {
+  console.error('❌ Failed to start server:', error);
+  process.exit(1);
+}
+
+// Process error handlers
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
 });
 
 // Graceful shutdown
