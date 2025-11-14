@@ -4,7 +4,7 @@ FROM mcr.microsoft.com/playwright:v1.40.0-jammy
 # Set working directory
 WORKDIR /app
 
-# Copy root project files (when building from project root)
+# Copy root project files for SiteScrapers
 COPY package*.json ./
 COPY tsconfig.json ./
 COPY SiteScrapers ./SiteScrapers
@@ -12,12 +12,12 @@ COPY SiteScrapers ./SiteScrapers
 # Install root dependencies (for SiteScrapers)
 RUN npm install
 
-# Copy scraper service files
+# Copy light scraper service files
 COPY services/scrapers/package*.json ./services/scrapers/
 COPY services/scrapers/tsconfig.json ./services/scrapers/
 COPY services/scrapers/src ./services/scrapers/src
 
-# Install scraper service dependencies
+# Install service dependencies
 WORKDIR /app/services/scrapers
 RUN npm install
 
