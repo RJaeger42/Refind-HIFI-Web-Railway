@@ -57,7 +57,7 @@ app.get('/status', (req, res) => {
 });
 
 export function startWebhookServer() {
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`🌐 Webhook server listening on port ${PORT}`);
   });
 }
