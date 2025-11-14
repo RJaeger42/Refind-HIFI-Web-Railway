@@ -1,6 +1,6 @@
 import { AVAILABLE_SCRAPERS, getAvailableScrapers } from '../../../SiteScrapers/index';
 import type { ListingResult } from '../../../SiteScrapers/types';
-import { saveListings, testConnection, closeConnection, Listing } from './database';
+import { saveListings, testConnection, closeConnection, logScraperError, Listing } from './database';
 
 // Heavy scrapers only: Facebook and HifiShark
 const HEAVY_SCRAPERS = ['facebook', 'hifishark'] as const;
@@ -59,6 +59,14 @@ async function runScraper(scraperName: string): Promise<number> {
     return saved;
   } catch (error) {
     console.error(`   ❌ Error running ${scraperName}:`, error);
+
+    // Log error to database
+    if (error instanceof Error) {
+      await logScraperError(scraperName, error);
+    } else {
+      await logScraperError(scraperName, new Error(String(error)));
+    }
+
     return 0;
   }
 }

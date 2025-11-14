@@ -13,7 +13,7 @@ console.log('✅ Imports loaded');
 
 const { Pool } = pg;
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = parseInt(process.env.PORT || '3000', 10);
 
 console.log('✅ Express app created');
 
@@ -48,9 +48,45 @@ app.use(cors());
 app.use(express.json());
 console.log('✅ Middleware loaded');
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+// Health check endpoint - comprehensive checks
+app.get('/health', async (req, res) => {
+  const health: any = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    checks: {}
+  };
+
+  // Check database
+  try {
+    await pool.query('SELECT 1');
+    health.checks.database = 'ok';
+  } catch (error: any) {
+    health.checks.database = 'failed';
+    health.checks.databaseError = error.message;
+    health.status = 'degraded';
+  }
+
+  // Check scrapers (optional - don't fail health if scrapers are down)
+  try {
+    const heavyResponse = await fetch('http://scrapers-heavy.railway.internal:3001/health', {
+      signal: AbortSignal.timeout(2000)
+    });
+    health.checks.scrapersHeavy = heavyResponse.ok ? 'ok' : 'failed';
+  } catch (error: any) {
+    health.checks.scrapersHeavy = 'unreachable';
+  }
+
+  try {
+    const lightResponse = await fetch('http://scrapers.railway.internal:3001/health', {
+      signal: AbortSignal.timeout(2000)
+    });
+    health.checks.scrapersLight = lightResponse.ok ? 'ok' : 'failed';
+  } catch (error: any) {
+    health.checks.scrapersLight = 'unreachable';
+  }
+
+  const statusCode = health.status === 'ok' ? 200 : 503;
+  res.status(statusCode).json(health);
 });
 
 // Get all listings with filters
@@ -228,6 +264,54 @@ app.get('/api/stats', async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching stats:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get recent scraper errors
+app.get('/api/errors', async (req, res) => {
+  try {
+    const { scraper, limit = 50, offset = 0 } = req.query;
+
+    let query = 'SELECT * FROM scraper_errors WHERE 1=1';
+    const params: any[] = [];
+    let paramCount = 0;
+
+    if (scraper) {
+      paramCount++;
+      params.push(scraper);
+      query += ` AND scraper_name = $${paramCount}`;
+    }
+
+    query += ' ORDER BY occurred_at DESC';
+
+    paramCount++;
+    params.push(parseInt(limit as string) || 50);
+    query += ` LIMIT $${paramCount}`;
+
+    paramCount++;
+    params.push(parseInt(offset as string) || 0);
+    query += ` OFFSET $${paramCount}`;
+
+    const result = await pool.query(query, params);
+
+    // Get summary stats
+    const statsResult = await pool.query(`
+      SELECT
+        COUNT(*) as total_errors,
+        COUNT(DISTINCT scraper_name) as affected_scrapers,
+        MAX(occurred_at) as last_error
+      FROM scraper_errors
+      WHERE occurred_at > NOW() - INTERVAL '24 hours'
+    `);
+
+    res.json({
+      errors: result.rows,
+      stats: statsResult.rows[0]
+    });
+
+  } catch (error) {
+    console.error('Error fetching scraper errors:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

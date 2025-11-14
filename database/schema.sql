@@ -35,6 +35,18 @@ CREATE TABLE IF NOT EXISTS price_history (
 CREATE INDEX IF NOT EXISTS idx_listing_id ON price_history(listing_id);
 CREATE INDEX IF NOT EXISTS idx_timestamp ON price_history(timestamp);
 
+-- Scraper error tracking
+CREATE TABLE IF NOT EXISTS scraper_errors (
+  id SERIAL PRIMARY KEY,
+  scraper_name VARCHAR(100) NOT NULL,
+  error_message TEXT NOT NULL,
+  error_stack TEXT,
+  occurred_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_scraper_errors_name ON scraper_errors(scraper_name);
+CREATE INDEX IF NOT EXISTS idx_scraper_errors_occurred ON scraper_errors(occurred_at);
+
 -- Optional: Create a view for latest listings (one per URL)
 CREATE OR REPLACE VIEW latest_listings AS
 SELECT DISTINCT ON (url) *

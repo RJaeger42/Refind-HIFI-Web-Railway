@@ -99,6 +99,30 @@ npm run site -- --site facebook-marketplace --query "Högtalare"
 
 All Marketplace scrapers (Blocket, Tradera, HifiTorget, HiFiShark, Facebook, etc.) now have full Playwright implementations mirroring the Python originals, so the Node harness is the quickest way to validate behaviour before wiring the results back into the CLI.
 
+## Web Services (Railway Deployment)
+
+The scrapers can also run as web services on Railway with API + frontend:
+
+- **API**: `/api/listings`, `/api/stats`, `/api/errors`, `/health`
+- **Scrapers**: Automated via cron (6h intervals) + manual trigger endpoint
+- **Frontend**: React SPA for browsing listings
+
+### Monitoring & Alerts
+After deploying to Railway:
+```bash
+# Run smoke test
+./scripts/smoke-test.sh https://your-api.railway.app
+
+# Check error dashboard
+curl https://your-api.railway.app/api/errors
+```
+
+See [`docs/MONITORING.md`](docs/MONITORING.md) for:
+- Railway alerts setup
+- Error tracking endpoint usage
+- Health check configuration
+- Uptime monitoring recommendations
+
 ## Contributing & Next Steps
 
 - `ROADMAP.md` holds the active backlog (price filtering, exports, cached history, etc.).

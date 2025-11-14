@@ -66,6 +66,13 @@ async function runScraper(scraperName) {
     }
     catch (error) {
         console.error(`   ❌ Error running ${scraperName}:`, error);
+        // Log error to database
+        if (error instanceof Error) {
+            await (0, database_1.logScraperError)(scraperName, error);
+        }
+        else {
+            await (0, database_1.logScraperError)(scraperName, new Error(String(error)));
+        }
         return 0;
     }
 }

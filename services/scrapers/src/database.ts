@@ -73,3 +73,16 @@ export async function testConnection(): Promise<boolean> {
 export async function closeConnection(): Promise<void> {
   await pool.end();
 }
+
+export async function logScraperError(scraperName: string, error: Error): Promise<void> {
+  try {
+    await pool.query(
+      `INSERT INTO scraper_errors (scraper_name, error_message, error_stack)
+       VALUES ($1, $2, $3)`,
+      [scraperName, error.message, error.stack]
+    );
+  } catch (dbError) {
+    console.error('Failed to log scraper error to DB:', dbError);
+    // Don't throw - logging errors shouldn't break scraping
+  }
+}

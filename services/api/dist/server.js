@@ -3,30 +3,87 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+console.log('🚀 API Server starting...');
+console.log('📍 PORT:', process.env.PORT || 3000);
+console.log('📍 NODE_ENV:', process.env.NODE_ENV);
+console.log('📍 DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const compression_1 = __importDefault(require("compression"));
 const pg_1 = __importDefault(require("pg"));
+console.log('✅ Imports loaded');
 const { Pool } = pg_1.default;
 const app = (0, express_1.default)();
-const PORT = process.env.PORT || 3000;
+const PORT = parseInt(process.env.PORT || '3000', 10);
+console.log('✅ Express app created');
 // Database connection pool
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
-    max: 20,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
-});
+let pool;
+try {
+    pool = new Pool({
+        connectionString: process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL,
+        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+        max: 20,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 2000,
+    });
+    console.log('✅ Database pool created');
+    // Test connection
+    pool.query('SELECT 1').then(() => {
+        console.log('✅ Database connection successful');
+    }).catch(err => {
+        console.error('❌ Database connection test failed:', err.message);
+    });
+}
+catch (error) {
+    console.error('❌ Failed to create database pool:', error);
+    throw error;
+}
 // Middleware
+console.log('📦 Loading middleware...');
 app.use((0, helmet_1.default)());
 app.use((0, compression_1.default)());
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
-// Health check endpoint
-app.get('/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+console.log('✅ Middleware loaded');
+// Health check endpoint - comprehensive checks
+app.get('/health', async (req, res) => {
+    const health = {
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        checks: {}
+    };
+    // Check database
+    try {
+        await pool.query('SELECT 1');
+        health.checks.database = 'ok';
+    }
+    catch (error) {
+        health.checks.database = 'failed';
+        health.checks.databaseError = error.message;
+        health.status = 'degraded';
+    }
+    // Check scrapers (optional - don't fail health if scrapers are down)
+    try {
+        const heavyResponse = await fetch('http://scrapers-heavy.railway.internal:3001/health', {
+            signal: AbortSignal.timeout(2000)
+        });
+        health.checks.scrapersHeavy = heavyResponse.ok ? 'ok' : 'failed';
+    }
+    catch (error) {
+        health.checks.scrapersHeavy = 'unreachable';
+    }
+    try {
+        const lightResponse = await fetch('http://scrapers.railway.internal:3001/health', {
+            signal: AbortSignal.timeout(2000)
+        });
+        health.checks.scrapersLight = lightResponse.ok ? 'ok' : 'failed';
+    }
+    catch (error) {
+        health.checks.scrapersLight = 'unreachable';
+    }
+    const statusCode = health.status === 'ok' ? 200 : 503;
+    res.status(statusCode).json(health);
 });
 // Get all listings with filters
 app.get('/api/listings', async (req, res) => {
@@ -167,6 +224,45 @@ app.get('/api/stats', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+// Get recent scraper errors
+app.get('/api/errors', async (req, res) => {
+    try {
+        const { scraper, limit = 50, offset = 0 } = req.query;
+        let query = 'SELECT * FROM scraper_errors WHERE 1=1';
+        const params = [];
+        let paramCount = 0;
+        if (scraper) {
+            paramCount++;
+            params.push(scraper);
+            query += ` AND scraper_name = $${paramCount}`;
+        }
+        query += ' ORDER BY occurred_at DESC';
+        paramCount++;
+        params.push(parseInt(limit) || 50);
+        query += ` LIMIT $${paramCount}`;
+        paramCount++;
+        params.push(parseInt(offset) || 0);
+        query += ` OFFSET $${paramCount}`;
+        const result = await pool.query(query, params);
+        // Get summary stats
+        const statsResult = await pool.query(`
+      SELECT
+        COUNT(*) as total_errors,
+        COUNT(DISTINCT scraper_name) as affected_scrapers,
+        MAX(occurred_at) as last_error
+      FROM scraper_errors
+      WHERE occurred_at > NOW() - INTERVAL '24 hours'
+    `);
+        res.json({
+            errors: result.rows,
+            stats: statsResult.rows[0]
+        });
+    }
+    catch (error) {
+        console.error('Error fetching scraper errors:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 // Trigger scraper manually
 app.post('/api/scrape/trigger', async (req, res) => {
     try {
@@ -253,9 +349,32 @@ app.use((err, req, res, next) => {
     console.error('Unhandled error:', err);
     res.status(500).json({ error: 'Internal server error' });
 });
-// Start server
-app.listen(PORT, () => {
-    console.log(`API server running on port ${PORT}`);
+// Start server - bind to 0.0.0.0 for Docker/Railway
+console.log(`🌐 Attempting to start server on port ${PORT}...`);
+try {
+    const server = app.listen(PORT, '0.0.0.0', () => {
+        console.log(`✅ ✅ ✅ API server running on port ${PORT} ✅ ✅ ✅`);
+    });
+    server.on('error', (error) => {
+        console.error('❌ Server error:', error);
+        if (error.code === 'EADDRINUSE') {
+            console.error(`❌ Port ${PORT} is already in use`);
+        }
+        process.exit(1);
+    });
+}
+catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+}
+// Process error handlers
+process.on('uncaughtException', (error) => {
+    console.error('❌ Uncaught Exception:', error);
+    process.exit(1);
+});
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+    process.exit(1);
 });
 // Graceful shutdown
 process.on('SIGTERM', async () => {

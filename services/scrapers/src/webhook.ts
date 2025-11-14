@@ -2,7 +2,7 @@ import express from 'express';
 import { runAllScrapers } from './scrape';
 
 const app = express();
-const PORT = process.env.WEBHOOK_PORT || 3001;
+const PORT = parseInt(process.env.WEBHOOK_PORT || '3001', 10);
 const SECRET = process.env.WEBHOOK_SECRET || 'change-me-in-production';
 
 app.use(express.json());

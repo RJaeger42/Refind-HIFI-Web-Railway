@@ -7,7 +7,7 @@ exports.startWebhookServer = startWebhookServer;
 const express_1 = __importDefault(require("express"));
 const scrape_1 = require("./scrape");
 const app = (0, express_1.default)();
-const PORT = process.env.WEBHOOK_PORT || 3001;
+const PORT = parseInt(process.env.WEBHOOK_PORT || '3001', 10);
 const SECRET = process.env.WEBHOOK_SECRET || 'change-me-in-production';
 app.use(express_1.default.json());
 let isRunning = false;
@@ -54,7 +54,7 @@ app.get('/status', (req, res) => {
     });
 });
 function startWebhookServer() {
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
         console.log(`🌐 Webhook server listening on port ${PORT}`);
     });
 }

@@ -4,6 +4,7 @@ exports.saveListing = saveListing;
 exports.saveListings = saveListings;
 exports.testConnection = testConnection;
 exports.closeConnection = closeConnection;
+exports.logScraperError = logScraperError;
 const pg_1 = require("pg");
 const pool = new pg_1.Pool({
     connectionString: process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL,
@@ -62,4 +63,14 @@ async function testConnection() {
 }
 async function closeConnection() {
     await pool.end();
+}
+async function logScraperError(scraperName, error) {
+    try {
+        await pool.query(`INSERT INTO scraper_errors (scraper_name, error_message, error_stack)
+       VALUES ($1, $2, $3)`, [scraperName, error.message, error.stack]);
+    }
+    catch (dbError) {
+        console.error('Failed to log scraper error to DB:', dbError);
+        // Don't throw - logging errors shouldn't break scraping
+    }
 }
