@@ -1,11 +1,9 @@
 import { test, expect, chromium } from '@playwright/test';
 import {
   AkkelisAudioPlaywright,
-  BlocketPlaywright,
   HifiPulsPlaywright,
   HifiSharkPlaywright,
   HifiTorgetPlaywright,
-  TraderaPlaywright,
   ReferenceAudioPlaywright,
   LjudmakarnPlaywright,
   HifiPunktenPlaywright,

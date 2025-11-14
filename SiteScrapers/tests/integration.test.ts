@@ -3,7 +3,6 @@ import {
   AkkelisAudioPlaywright,
   HifiPulsPlaywright,
   HifiSharkPlaywright,
-  TraderaPlaywright,
   ReferenceAudioPlaywright,
   ListingResult,
 } from '../index';
